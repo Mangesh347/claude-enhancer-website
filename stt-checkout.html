@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkout — Screen Time Tracker Pro</title>
+  <style>
+    :root { --bg:#0a1014; --card:#142028; --line:#243844; --t1:#eef6f8; --t2:#93aab4; --cyan:#3dd6c6; --pp:#0070ba; --rz:#072654; }
+    *{box-sizing:border-box} body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .box{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px}
+    h1{font-size:22px;margin:0 0 6px} .sub{color:var(--t2);font-size:13px;margin-bottom:18px}
+    .cycle{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+    .cycle button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0e161c;color:var(--t1);cursor:pointer;font-weight:700}
+    .cycle button.on{border-color:var(--cyan);color:var(--cyan)}
+    .price{font-size:32px;font-weight:800;margin:8px 0 4px} .hint{font-size:12px;color:var(--t2);margin-bottom:16px}
+    .pay{display:flex;flex-direction:column;gap:10px}
+    .pay button{padding:14px;border-radius:12px;border:none;font-weight:800;cursor:pointer;font-size:14px}
+    .paypal{background:#ffc439;color:#003087}
+    .razorpay{background:#528ff0;color:#fff}
+    .email{font-size:12px;color:var(--cyan);margin-bottom:12px}
+    .note{font-size:11px;color:var(--t2);margin-top:14px;line-height:1.5}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Screen Time Tracker Pro</h1>
+    <p class="sub">Hard Lock · Schedules · 90-day history · Sync · Cleaner Pro</p>
+    <div class="email" id="email"></div>
+    <div class="cycle" id="cycles">
+      <button type="button" data-cycle="monthly">Monthly</button>
+      <button type="button" data-cycle="yearly" class="on">Yearly</button>
+      <button type="button" data-cycle="lifetime">Lifetime</button>
+    </div>
+    <div class="price" id="price">$39</div>
+    <div class="hint" id="hint">Billed yearly · Save 35%</div>
+    <div class="pay">
+      <button type="button" class="paypal" id="btn-pp">Pay with PayPal</button>
+      <button type="button" class="razorpay" id="btn-rz">Pay with Razorpay (UPI / INR)</button>
+    </div>
+    <p class="note">After payment, return to Chrome — Pro unlocks on this email via Supabase entitlement. Wire live PayPal/Razorpay keys in your Vercel API (same pattern as Claude Enhancer).</p>
+  </div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    let cycle = params.get('cycle') || 'yearly';
+    let currency = params.get('currency') || 'USD';
+    const email = params.get('email') || '';
+    document.getElementById('email').textContent = email ? `Billing email: ${email}` : 'Add ?email= from the extension';
+
+    const PRICES = {
+      USD: { monthly: '$4.99', yearly: '$39', lifetime: '$79' },
+      INR: { monthly: '₹299', yearly: '₹2,499', lifetime: '₹4,999' },
+    };
+
+    function render() {
+      currency = document.getElementById('btn-rz').dataset.active === '1' ? 'INR' : (params.get('currency') || currency);
+      const cur = currency === 'INR' ? 'INR' : 'USD';
+      document.getElementById('price').textContent = PRICES[cur][cycle] || PRICES.USD[cycle];
+      document.querySelectorAll('#cycles button').forEach(b => b.classList.toggle('on', b.dataset.cycle === cycle));
+      document.getElementById('hint').textContent =
+        cycle === 'yearly' ? 'Best value · ~35% off monthly' :
+        cycle === 'lifetime' ? 'Pay once · all future updates' : 'Cancel anytime';
+    }
+
+    document.getElementById('cycles').addEventListener('click', e => {
+      const b = e.target.closest('button[data-cycle]');
+      if (!b) return;
+      cycle = b.dataset.cycle;
+      render();
+    });
+
+    function go(provider) {
+      if (!email) { alert('Open checkout from the extension so your email is attached.'); return; }
+      // Placeholder: replace with live /api/stt/create-order that returns PayPal/Razorpay session URL
+      const api = '/api/stt/create-checkout';
+      const url = new URL(api, location.origin);
+      url.searchParams.set('cycle', cycle);
+      url.searchParams.set('provider', provider);
+      url.searchParams.set('email', email);
+      url.searchParams.set('currency', provider === 'razorpay' ? 'INR' : 'USD');
+      url.searchParams.set('product', 'stt');
+      location.href = url.toString();
+    }
+
+    document.getElementById('btn-pp').onclick = () => go('paypal');
+    document.getElementById('btn-rz').onclick = () => {
+      currency = 'INR';
+      render();
+      go('razorpay');
+    };
+    render();
+  </script>
+</body>
+</html>
